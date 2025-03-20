@@ -1,27 +1,35 @@
-# Multi-Agent System with Couchbase Vector Store and Amazon Bedrock
+# AWS Bedrock Agents Framework
 
-This application demonstrates how to create a multi-agent system using Amazon Bedrock agents and Couchbase as a vector store. The system consists of three specialized agents:
+This repository contains a framework for creating and managing agents using AWS Bedrock, implementing two different execution approaches: Lambda-based execution and Custom Control execution.
 
-1. **Embedder Agent**: Handles document storage and vector embeddings
-2. **Researcher Agent**: Searches and retrieves information from documents
-3. **Content Writer Agent**: Formats and presents research findings in a user-friendly way
+## Overview
+
+This framework provides a complete solution for:
+
+1. Setting up Couchbase as a vector database
+2. Creating and populating vector embeddings using AWS Bedrock
+3. Creating specialized AI agents with different function capabilities
+4. Implementing and comparing two execution models:
+   - Lambda-based function execution
+   - Custom Control (RETURN_CONTROL) based execution
 
 ## Prerequisites
 
-- Python 3.8+
-- Couchbase Server running locally or in the cloud
-- AWS account with access to Amazon Bedrock
-- AWS credentials with appropriate permissions
+- AWS Account with Bedrock access enabled
+- Couchbase Server cluster (either self-hosted or on cloud)
+- Python 3.9+
+- AWS CLI configured with appropriate permissions
 
 ## Environment Setup
 
-1. Copy `.env.example` to `.env` and fill in your configuration:
+Create a `.env` file in the root directory with the following variables:
 
-```bash
+```
 # AWS Configuration
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_ACCOUNT_ID=your_account_id
 
 # Couchbase Configuration
 CB_HOST=couchbase://localhost
@@ -31,118 +39,182 @@ CB_BUCKET_NAME=vector-search-testing
 SCOPE_NAME=shared
 COLLECTION_NAME=bedrock
 INDEX_NAME=vector_search_bedrock
+
+# Execution Approach (custom_control or lambda)
+APPROACH=custom_control
 ```
 
 ## Installation
 
-1. Create a virtual environment:
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/aws-bedrock-agents-scripts.git
+cd aws-bedrock-agents-scripts
+```
+
+2. Create a virtual environment and install dependencies:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-2. Install dependencies:
-```bash
 pip install -r requirements.txt
 ```
 
-3. Start Jupyter Notebook:
-```bash
-jupyter notebook
+## Project Structure
+
+```
+.
+├── main.py                     # Main script with setup and execution logic
+├── utils.py                    # Shared utility functions
+├── age_lambda.py               # Lambda-based agent execution
+├── age_custom_control.py       # Custom Control based agent execution
+├── lambda_functions/           # Lambda function code
+│   ├── bedrock_agent_researcher.py # Researcher agent Lambda
+│   ├── bedrock_agent_writer.py     # Writer agent Lambda
+│   ├── deploy.py               # Script to deploy Lambda functions
+│   └── requirements.txt        # Lambda function dependencies
+├── lambda_demo/                # Demo code for testing Lambda deployments
+├── documents.json              # Sample documents for agent knowledge
+└── aws_index.json              # Couchbase vector search index definition
 ```
 
-4. Open `couchbase_agents.ipynb` and run through the cells
+## Core Components
 
-## Architecture
+### 1. Vector Store Setup
 
-The system uses:
-- Amazon Bedrock for:
-  - Agent infrastructure and orchestration
-  - LLM capabilities (Claude 3 Sonnet)
-  - Text embeddings (Titan)
-- Couchbase for:
-  - Vector storage
-  - Similarity search
-  - Document management
-- LangChain for:
-  - Vector store integration
-  - Bedrock integration
+The framework sets up Couchbase as a vector store:
+- Creates/verifies Couchbase bucket, scope, and collection
+- Sets up search indexes for vector similarity search
+- Loads documents from `documents.json` and embeds them using Bedrock's embedding model
 
-All agents use the Return of Control (ROC) pattern to interact directly with the system, eliminating the need for Lambda functions.
+### 2. Agent Implementation
 
-## Agent Roles
+Two specialized agents are implemented:
 
-### Embedder Agent
-- Handles document storage in the vector store
-- Validates document content
-- Manages metadata
-- Ensures document quality
+**Researcher Agent**:
+- Searches through documents using semantic similarity
+- Provides relevant document excerpts
+- Answers questions based on document content
 
-### Researcher Agent
-- Performs semantic similarity searches
-- Retrieves relevant documents
-- Provides accurate citations
-- Maintains search quality
-
-### Content Writer Agent
-- Formats research findings
+**Writer Agent**:
+- Formats research findings in a user-friendly way
 - Creates clear summaries
 - Organizes information logically
-- Makes complex information accessible
+- Highlights key insights
 
-## Example Usage
+### 3. Execution Approaches
 
-### Adding Documents
-Use the Embedder Agent to add new documents:
+**Lambda Approach**:
+- Creates Lambda functions for each agent's capabilities
+- Sets up Lambda execution permissions
+- Delegates function execution to AWS Lambda functions
 
-```python
-embedder_response = invoke_agent(
-    embedder_id,
-    embedder_alias,
-    'Add this document: "Your document text here"'
-)
+**Custom Control Approach**:
+- Uses the RETURN_CONTROL mechanism to handle function execution locally
+- Processes agent responses and function calls within the application
+
+## Usage
+
+Run the main script to set up and test both agents:
+
+```bash
+python main.py
 ```
 
-### Searching Documents
-Use the Researcher Agent to find information:
+To specify which approach to use, set the `APPROACH` environment variable:
 
-```python
-researcher_response = invoke_agent(
-    researcher_id,
-    researcher_alias,
-    'Your search query here'
-)
+```bash
+# For Lambda approach
+export APPROACH=lambda
+python main.py
+
+# For Custom Control approach
+export APPROACH=custom_control
+python main.py
 ```
 
-### Formatting Results
-Use the Content Writer Agent to present findings:
+## Lambda Functions
 
-```python
-writer_response = invoke_agent(
-    writer_id,
-    writer_alias,
-    f'Format this research finding: {researcher_response}'
-)
+The Lambda functions implement:
+
+1. **Researcher Lambda (`bedrock_agent_researcher.py`)**:
+   - Connects to Couchbase
+   - Performs similarity searches using vector embeddings
+   - Returns relevant document excerpts
+
+2. **Writer Lambda (`bedrock_agent_writer.py`)**:
+   - Takes content and formatting instructions
+   - Uses Bedrock models to format content
+   - Returns formatted content
+
+### Deploying Lambda Functions
+
+Lambda functions are automatically deployed when using the Lambda approach:
+
+```bash
+python lambda_functions/deploy.py
 ```
 
-## Important Notes
+## Advanced Configuration
 
-1. Ensure your Couchbase cluster has the vector search index configured (see aws_index.json)
-2. The Embedder Agent requires confirmation before adding documents
-3. The Researcher Agent provides citations from source documents
-4. The Content Writer Agent focuses on presentation, not document storage
-5. All vector operations use semantic similarity with dot product
+### Modifying Agent Instructions
 
-## Vector Search Configuration
+Agent instructions and function definitions can be modified in `main.py`:
 
-The system uses a vector search index optimized for:
-- 1024-dimensional vectors (Titan embeddings)
-- Dot product similarity
-- Recall optimization
-- Text field storage
+```python
+researcher_instructions = """
+You are a Research Assistant that helps users find relevant information in documents.
+...
+"""
 
-See `aws_index.json` for the complete index configuration.
+researcher_functions = [{
+    "name": "search_documents",
+    "description": "Search for relevant documents using semantic similarity",
+    ...
+}]
+```
+
+### Adding New Documents
+
+Add new documents to the `documents.json` file:
+
+```json
+{
+  "documents": [
+    {
+      "text": "Your document content here",
+      "metadata_field1": "value1",
+      "metadata_field2": "value2"
+    }
+  ]
+}
+```
+
+## Best Practices
+
+1. **Error Handling**: Both approaches implement robust error handling and retries for AWS service calls
+2. **Debugging**: Enable trace for better visibility into agent execution flow
+3. **Performance Optimization**: Lambda functions include optimization techniques for deployment size and execution speed
+4. **Security**: IAM roles are configured with minimum required permissions
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Lambda Deployment Failures**:
+   - Ensure AWS credentials have appropriate permissions
+   - Check Lambda limits in your AWS account
+   - Verify network connectivity to AWS services
+
+2. **Vector Search Issues**:
+   - Verify Couchbase Search service is enabled
+   - Check index definition in `aws_index.json`
+   - Ensure documents have been properly embedded
+
+3. **Agent Execution Errors**:
+   - Examine logs for specific error messages
+   - Verify agent instructions and function schemas match
+   - Check agent preparation status using AWS console
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License
