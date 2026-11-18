@@ -73,6 +73,7 @@ pip install -r requirements.txt
 │   ├── deploy.py               # Script to deploy Lambda functions
 │   └── requirements.txt        # Lambda function dependencies
 ├── lambda_demo/                # Demo code for testing Lambda deployments
+├── tests/                      # Offline unit tests
 ├── documents.json              # Sample documents for agent knowledge
 └── aws_index.json              # Couchbase vector search index definition
 ```
@@ -152,6 +153,14 @@ Lambda functions are automatically deployed when using the Lambda approach:
 
 ```bash
 python lambda_functions/deploy.py
+```
+
+### Running Tests
+
+Offline unit tests (standard library only, no AWS or Couchbase access) cover the Lambda deployment wiring:
+
+```bash
+python -m unittest discover -s tests
 ```
 
 ## Advanced Configuration

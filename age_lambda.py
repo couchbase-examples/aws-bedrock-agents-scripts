@@ -1,9 +1,32 @@
 import json
 import logging
 import subprocess
+import sys
 import time
 import uuid
 import os
+
+# Resolve the deploy script relative to this module so the Lambda approach
+# works regardless of the current working directory.
+LAMBDA_DEPLOY_SCRIPT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "lambda_functions", "deploy.py"
+)
+
+def deploy_lambda_functions(deploy_script=LAMBDA_DEPLOY_SCRIPT):
+    """Package and deploy the researcher/writer Lambda functions.
+
+    The deploy script runs in a child process that inherits this process's
+    environment (already populated from the repo-root .env by main.py), and
+    deploy.py itself loads the same repo-root .env and passes the Couchbase
+    settings to the Lambda functions as environment variables.
+    """
+    print("Deploying Lambda functions...")
+    try:
+        subprocess.run([sys.executable, deploy_script], check=True)
+        print("Lambda functions deployed successfully")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error deploying Lambda functions: {str(e)}")
+        raise RuntimeError("Failed to deploy Lambda functions")
 
 def create_agent(bedrock_agent_client, name, instructions, functions, model_id="amazon.nova-pro-v1:0"):
     """Create a Bedrock agent with Lambda action groups"""
@@ -233,26 +256,7 @@ def run_lambda_approach(
     print("\nTrying Lambda approach...")
     
     # Deploy Lambda functions first
-    print("Deploying Lambda functions...")
-    try:
-        # Create a .env file for the Lambda functions with the vector store configuration
-        with open('awsbedrock-agents/lambda_functions/.env', 'w') as f:
-            f.write(f"CB_HOST={os.environ.get('CB_HOST', 'couchbase://localhost')}\n")
-            f.write(f"CB_USERNAME={os.environ.get('CB_USERNAME', 'Administrator')}\n")
-            f.write(f"CB_PASSWORD={os.environ.get('CB_PASSWORD', 'password')}\n")
-            f.write(f"CB_BUCKET_NAME={os.environ.get('CB_BUCKET_NAME', 'vector-search-testing')}\n")
-            f.write(f"SCOPE_NAME={os.environ.get('SCOPE_NAME', 'shared')}\n")
-            f.write(f"COLLECTION_NAME={os.environ.get('COLLECTION_NAME', 'bedrock')}\n")
-            f.write(f"INDEX_NAME={os.environ.get('INDEX_NAME', 'vector_search_bedrock')}\n")
-        
-        subprocess.run([
-            'python3', 
-            'awsbedrock-agents/lambda_functions/deploy.py'
-        ], check=True)
-        print("Lambda functions deployed successfully")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Error deploying Lambda functions: {str(e)}")
-        raise RuntimeError("Failed to deploy Lambda functions")
+    deploy_lambda_functions()
     
     # Create researcher agent
     try:
