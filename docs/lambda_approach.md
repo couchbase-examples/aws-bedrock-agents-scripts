@@ -1,6 +1,6 @@
 # Bedrock Agents: Lambda Approach Explained
 
-This document explains the Lambda approach for AWS Bedrock Agents, as implemented in the provided example code (including the code in `awsbedrock-agents/lambda_functions`).
+This document explains the Lambda approach for AWS Bedrock Agents, as implemented in the provided example code (including the code in `lambda_functions/`).
 
 ## Overview
 
@@ -16,8 +16,8 @@ The Lambda approach delegates the execution of an agent's defined functions (too
     *   Create separate AWS Lambda functions to implement the logic for each tool defined in the schema (e.g., one Lambda for `search_documents`, another for `format_content`).
     *   These Lambda functions receive an event payload containing the API path, parameters, and other details of the agent's request.
     *   The Lambda code needs to parse this event, execute the required action (e.g., query the vector store, format text), and return a specific JSON response structure that Bedrock expects.
-    *   The example includes a `deploy` script in `awsbedrock-agents/lambda_functions` to package and deploy these handlers.
-    *   *Environment Configuration:* The Lambdas need access to necessary resources and configuration (e.g., Couchbase connection details, Bedrock embeddings client). The example writes a `.env` file before deployment to potentially pass this information, though the exact mechanism within the Lambda deployment/runtime isn't fully shown.
+    *   The example includes a `deploy.py` script in `lambda_functions/` to package and deploy these handlers.
+    *   *Environment Configuration:* The Lambdas need access to necessary resources and configuration (e.g., Couchbase connection details, Bedrock embeddings client). `lambda_functions/deploy.py` loads the repo-root `.env` and passes the Couchbase settings (`CB_HOST`, `CB_USERNAME`, `CB_PASSWORD`, `CB_BUCKET_NAME`, `SCOPE_NAME`, `COLLECTION_NAME`, `INDEX_NAME`) to each Lambda function as environment variables.
 
 3.  **Create Agent in Bedrock:**
     *   Use `bedrock_agent_client.create_agent` similar to the Custom Control approach.
